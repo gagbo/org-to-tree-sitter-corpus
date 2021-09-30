@@ -1,0 +1,72 @@
+#+TITLE: Org to Tree-sitter corpus
+#+SUBTITLE: Convert org-mode regions to TS test format
+
+#+begin_quote
+Yes, I think I win the longest prefix competition
+#+end_quote
+
+* Table of Contents :TOC:
+- [[#introduction][Introduction]]
+- [[#usage][Usage]]
+- [[#limitations][Limitations]]
+- [[#design-and-about-developing-a-tree-sitter-spec-from-org-element-asts][Design (and about developing a tree-sitter spec from org-element ASTs)]]
+- [[#extra-test-files][Extra test files]]
+
+* Introduction
+
+As currently there are multiple efforts to enhance the definition of Org-mode
+grammar, this project allows to take a region of Org-mode text, parse it using
+emacslisp implementation of org, and make a format suitable for tree-sitter
+corpus.
+
+This way, anyone can build the part of the spec they want to be respected as
+test files for a TS parser.
+
+* Usage
+Functions are not interactive yet, but the main loop right now is to use
+
+#+begin_src emacs-lisp
+(org-to-tree-sitter-corpus-convert-org-file
+ "/abs/path/to/org-to-tree-sitter-corpus/test_files/test_inputs/simple_tag.org"
+ 'delete-old)
+#+end_src
+
+Which will
+- forcefully delete the old converted file (if it exists)
+- create =/abs/path/to/org-to-tree-sitter-corpus/test_files/test_inputs/simple_tag.txt=
+  with this content (the ~,~ is only in this README file to avoid bad parsing)
+#+begin_quote
+==========
+simple tag
+==========
+
+,* Has a tag :tag3:
+
+---
+
+(org_data (headline (stars) (title)))
+#+end_quote
+
+* Limitations
+
+Because it just copy pastes the input into a ~.txt~ file, the input ~.org~ file
+must not contain "tree-sitter test" specific syntax like the ~---~ or the ~=~
+banner.
+
+* Design (and about developing a tree-sitter spec from org-element ASTs)
+
+Currently the conversion from an actual parse tree coming from =org-element= to
+an AST suitable for tree-sitter tests is done with the helper functions
+~org-to-tree-sitter-corpus--transform-*~. Each one is responsible for
+transforming an =org-element= tree node into the matching list expression. It
+therefore also allows to control the expected format for a tree-sitter grammar.
+
+I didn't test nested paragraphs/structures yet, it's really early stage for now.
+
+At least, you can see in the =headline= handling how we read the extra metadata
+in order to make a relevant tree-sitter tree for the tests later; i.e. adding
+the =(tags)= or =(todo)=... nodes if relevant.
+
+* Extra test files
+Currently the files in [[./test_files/laundry]] folder are coming from [[https://github.com/tgbugs/laundry][Laundry test files]],
+on commit [[https://github.com/tgbugs/laundry/tree/5a396bef98d9a3cd9ee929f21cd47612dd6cb1ac/laundry][5a396be]]

@@ -1,0 +1,548 @@
+; @@comment: the colon is the only thing that cannot be avoided in this approach
+#lang org
+; @@
+# [[file:test.pdf]]
+# [[file:test.html]]
+
+#+options: debug:t
+
+:drawer:
+hello
+:end:
+
+#+latex_header: \usepackage{bigfoot}
+
+#+keyword: hello
+
+
+
+# (((((((( rainbow delims or my version of it is dumb
+
+* plain lists
+hello
+1. There
+   A. asdf
+
+   B. asdf
+
+2. 
+
+wat
+a) asdf
+b) asdf
+
+
+sigh
+A) zz
+B) qq
+
+
+asdf
+a. b
+c. d
+e. f
+
+3. [@3] [X] wat :: some values
+4. [ ]
+5. [  ] more than one space does not work in the checkbox
+6. [	] tab does not work in the checkbox
+7. [X]
+8. 
+
+
+1. 
+2. 
+3. 
+4. 
+
+1. .
+2) )
+3. .
+4) )
+
+
+1. 
+b. 
+C. 
+4. 
+
+
+1. a
+ b
+2. c
+ d
+ - e
+  f 
+ - g
+  h
+           - i
+            j
+   k
+           - l
+             1
+        - m
+         2
+      - n
+      3
+     - o
+    4
+      - p
+       q
+       - r
+
+
+1.1.1.1
+2.
+3.
+4.
+
+
+ - -
+ + +
+ * *
+
+* drawers
+
+                  :drawer:
+yes this
+is a drawer?
+           :end:
+more
+                  :end:
+
+:drawer:
+
+:drawer-not-a-drawer:
+| im a table | shor tand stout |
+|            | lol             |
+contents?!?
+:end:
+
+:end:
+
+* dynamic blocks
+#+begin: block
+:hello:
+asdf
+:end:
+#+end:
+
+#+begin:
+#+end:
+
+#+begin: not a dynamic block
+** oops
+#+end:
+
+* asdf
+:oHnoThISiSadrAweR:
+:eNd:
+* [#D] qq
+
+
+A. heloo
+B. there
+
+***nasdf
+* tables
+| i | am | a | table
+| I | don't | need | to end in a pipe
+
+
+| can you have newlines in cells?
+  this seems strange to me? | no, you can't
+
+* export snip
+@@something: some words
+and a newline too?
+@@
+Hrm
+   
+*this
+is bold*
+
+*test
+a*
+
++this
+should be
+struck+
+
+So the spec is inaccurate here. It is > 2 lines not > 3 lines. LESS than 3 lines is accurate.
+
+~what
+the code~
+
+=what
+the verbatim=
+
+a *b* /c/ _d_ +e+ =f= ~g~ yes newline is a bug
+
+*b but what happens if *b2 b2*? b*
+*b but what happens if _*b2 b2*_? b*
+
+* footnotes
+
+Inline [fn::footnote] footnote.
+
+Anchor [fn:x] footnote.
+
+Inline anchor [fn:y:Because we are going to reference this somewhere else.] footnote.
+
+Somewhere else [fn:y].
+
+[fn:x] Definition
+
+** here we go
+
+Inline nested [fn::And now we have another footnote in here [fn::Nested.]]
+
+Inline nested two [fn::
+ this is actually allowed [fn::and this is a footnote inside a footnote 
+ however the nesting behavior results in nested footnotes being rendered first
+ for some very strange reason, that might be a bug actually
+ ]
+ because the contents are just paragraphs]
+
+Inline nested three [fn::
+ not footnote due to block [fn::however this inner footnote does work
+ ] this does not work
+    #+begin_src bash
+    echo per the spec blocks can only go in non-inline footnotes
+    #+end_src
+ oof]
+
+Inline drawer should fail [fn::
+:hello:
+this should not be an inline footnote I think?
+:end:
+] and thankfully does because drawers are not valid parts of paragraphs.
+
+Inline multiple spaces [fn::Paragraph thing
+
+
+Hrm.
+
+
+Sigh
+
+
+] should still be part of the original paragraph?
+
+HAHAH YES. IT IS NOT!
+Despite the fact that the font locking regex shows that it is.
+
+A [fn::B
+C] D. Yes.
+
+E [fn::F
+
+G] H. No.
+
+I [fn::J
+
+
+K] L. No.
+
+Wat [fn:q].
+
+Intervening.
+
+The following is NOT a footnote anchor [fn:con].
+ [fn:con] confusingly.
+
+Testing [fn:no-space].
+
+What?!?!?!?! [fn:: [ hello =]= there
+another p]
+
+Unmatched [fn:: [ lol] this will fontify as footnotes all the way to the end of the file if it is not stopped!
+
+# ] required for containment
+
+[fn:q] Hello there
+#+begin_src bash
+echo this works for html but not for pdf or latex? A regression I think?
+echo no, you must have #+latex_header: \usepackage{bigfoot} for this
+echo see https://tex.stackexchange.com/questions/203/how-to-obtain-verbatim-text-in-a-footnote
+#+end_src
+after block
+:also:
+a drawer!
+:end:
+
+[fn:con]
+
+We have to have a real working =[fn:con]= definition otherwise org will not export.
+You can't set =#+options: broken-footnotes:t= like you can with =#+options: broken-links:t=.
+
+[fn:no-space]These don't require a space actually.
+
+#+begin_src elisp
+(+ 1 2)
+#+end_src
+* block issues
+#+begin_h
+#+end_h
+
+#+begin_h
+#+end_h
+
+* timestamps
+  <2018-09-04 Tue>
+
+* latex
+** environments
+Are these legacy and thus could be ignored since we have #+begin_hello blocks now?
+Thinking mostly about how to simplify the spec without losing functionality, even if
+there is a bit of work for users if they want to be able to go beyond emacs.
+
+\begin{hello}
+world
+\end{distractor}! hrm, I wonder ... do these nest ?
+\end{hello}
+
+** entities
+\alpha
+\pi{}d
+
+woah, ok this behavior is tricky because the parse is non-structural
+\pi{}{} urg
+\pi{hrm}{} urg
+
+\name{}
+\name{x}
+
+\hello{}{}
+\hello[]{}
+\hello{}[]
+\hello[][]
+
+uh, why is it eating whitespace?
+\[what is this thing?\]
+\[and can it actually have
+newlines? in it\]
+\(how about this one?\)
+\(a
+b\)
+
+These can't actually have empty lines because those break the paragraph before the paragraph parser runs
+\(c
+
+d\)
+
+What happens inline? \[hello world\] post line?
+What happens inline? \(hello world\) post line?
+
+huh, the parens render ... ah right, math
+ x_{sub} x_*wat* x_' x_{'} x_(oh no)
+ x^{sup} x^*wat* x^' x^{'} x^(oh no)
+
+x^{this
+is
+a really
+123 super
+)( !@#$%^&*_
+script
+}
+
+date^{ <2020-20-20> }
+
+** snip
+snip latex^{ @@latex: latex 1@@ }
+snip latex^{
+@@latex: latex 2@@ }
+
+snip latex^{
+@@latex: latex 3@@
+@@latex: latex 4@@
+}
+
+snip html^{ @@html: EVEN MORE LOL@@ breaks? }
+
+snip lh^{
+@@latex: latex 1@@
+@@html:  html 1@@ }
+
+I think the reason why this fails is because the html line is somehow
+commented out and treated as an empty line at some point in the export process
+snip the rest doesn't render
+
+lh^{ @@latex: latex 2@@
+@@html:  html 2@@
+}
+
+This means if we reverse the order then it will export correctly but only for latex
+
+lh^{ @@html:  html 3@@
+@@latex: latex 3@@
+}
+
+Clearly a bug.
+#+begin_src org
+lh2^{ @@latex: latex 2@@
+@@html:  html 2@@
+}
+
+lh3^{ @@html:  html 3@@
+@@latex: latex 3@@
+}
+#+end_src
+
+** nesting
+
+at the limit x_{{{}}}
+
+beyond the limit x_{{{{}}}}
+
+take it to the x_{ oh god y_{ i hope this does not z_{ work }}}
+yet it does, yet it does
+#+begin_export latex
+x\textsubscript{y\textsubscript{z\textsubscript{a\textsubscript{b\textsubscript{c\textsubscript{d\textsubscript{e}}}}}}}
+#+end_export
+thus it would seem that latex supports arbitrary nesting depth so no reason to limit it there
+
+[2020-20-20]_date
+[2020-20-20]^date
+
+@@latex: hrm@@^latex
+lol \\
+@@html: hrm@@^html
+
+@@comment: the ghost of subscript present@@^eeeeeeeeeeeeeeeeeeeeeeeeee
+
+The reason for this behavior is that someone might stack =@@latex: x@@@@html: y@@^value= or something like that
+it certainly makes the implementation easier
+
+* script
+
+_{not script}
+
+,_{script}
+
+(^(scr^(script)ipt))
+
+x^* is disabled by default
+
+x^{super} working
+x_{sub} working
+
+y^(
+y
+) working but needs differentiation from curlies
+
+x_{y}_{z}
+
+** markup interaction
+(_{oh})
+(_{no}_) org export and font lock diverge here, the spec is ambiguous here, it gives both patterns, but no priority, prefer underline
+the correct way to get subscript would be to use =(__{no}_)= =->= (__{no}_) however both ox latex and ox html are broken for this as well
+(*{no}*)
+(__{no} x_)
+
+
+=a=[fn::x y z]=b=
+
+# arg this one is a nightmare
+[=hello=]
+(=hello=)
+{=hello=}
+<=hello=>
+=hello=[]
+[]=hello=
+
+_u_{}
+_u_()
+_u_[]
+
+# #+begin_broken
+z^{
+z
+}
+#+end_broken
+
+# #+begin_oops
+x^{this
+is
+a really
+123 super
+)( !@#$%^&*_
+script
+}
+#+end_oops
+
+but wait! there's MORE_{how about [fn:: FOOTNOTES IN THE SCRIPT!?]}
+lol that's a bug, the footnote is there but its contents are empty
+
+x_{also a bug [fn:x]}
+
+[fn:x] also oa bug
+** maybe it is section zero? nope just broken
+y_{also a bug [fn:y]}
+
+[fn:y] ?
+
+z_{[fn:z]}
+[fn:z] org can detect if the footnote is missing, maybe it is just the latex out put?
+
+
+test [fn:q]
+[fn:q] q
+
+
+woah ... something very very broken is going on double footnote numbers? what!?
+the issues are just in the latex export backend, html is fine
+** source blocks in subscript
+a_{src_elisp[:exports both :eval never]{(+ 1 2)}}
+
+I don't believe you.
+src_elisp[:exports both :eval never]{(+ 1 2)}}}}}}}}}}}
+src_elisp[:exports both :eval never]{ {} well? (+ 3 4)}
+[fn:: sigh]
+
+src_elisp[:exports both :eval never]{  well? { (+ 5 6)}
+src_elisp[:exports both :eval never]{  well? } (+ 7 8)}
+# for comparison
+src_elisp[:exports both :eval never]{  well? { (+ 9 10)}
+# make sure these are separate
+src_elisp[:exports both :eval never]{  well? } (+ 11 12)}
+
+these require matching parens it would seem, which is not
+what the spec says, in fact, the body CAN contain newlines
+but curlies must match, I suspect it is the same for the
+options as well.
+
+so ... src_elisp[fn:: LOL :eval never :exports both]{(+ x y)} what's it gonna be? that's not a footnote ...
+
+src_elisp[:eval never :exports both]{so I heard
+that you could have multiple lines so long as
+it was all the same paragraph?
+(* 10 11 12)
+(message "OH NO")}
+
+** markup interaction
+x_{=}=}
+x_{={=}
+** footnote interaction
+everything about this is not good
+fontification has lost its mind, export conforms to spec but urg
+for simplicity sake we don't want to have to define all the pairwise
+and then all the nested interactions, so I think it is just easier to
+embrace context free nesting in these cases, because it is literally
+impossible to do it any other way
+
+x_{ ] }
+x_{ [ }
+
+x_{ [fn:: oh_{ ] no} ] }
+
+:^{[fn::works]}
+
+ox-latex totally busted for these the number is completely off, the minimal repro is above
+for the racket colorer mode can be used as a pda stack to count parens etc. without having
+to backtrack, but going full pda in the tokenizer is probably more than we can require
+
+[fn::^{[fn::oh } no]}]
+[fn::^{[fn::oh { no]}]
+[fn::x^{[fn::oh } no]}]
+[fn::x^{[fn::oh { no]}]

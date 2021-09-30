@@ -1,0 +1,6 @@
+# Compiled files
+*.elc
+*.eln
+
+# Output files from the transformer
+*.txt
