@@ -94,15 +94,15 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
   "Transform HEADLINE from an org-element headline to a tree-sitter corpus tree."
   (unless (eq (car headline) 'headline)
     (user-error (format "Expecting a headline element, got %s" (car headline))))
-  (let ((metadata (cdr headline)))
+  (let ((metadata (cadr headline)))
     (cl-remove-if #'null
                   (list 'headline
                         '(stars)
-                        (when (alist-get :commentedp metadata) '(comment_marker))
-                        (when (alist-get :priority metadata) '(priority_level))
-                        (when (alist-get :todo-keyword metadata) '(todo_keyword))
-                        (when (alist-get :raw-value metadata) '(title))
-                        (when (alist-get :tags metadata) '(tags))))))
+                        (when (plist-get metadata :commentedp) '(comment_marker))
+                        (when (plist-get metadata :priority) '(priority_level))
+                        (when (plist-get metadata :todo-keyword) '(todo_keyword))
+                        (when (plist-get metadata :raw-value) '(title))
+                        (when (plist-get metadata :tags) '(tags))))))
 
 (provide 'org-to-tree-sitter-corpus)
 ;;; org-to-tree-sitter-corpus.el ends here

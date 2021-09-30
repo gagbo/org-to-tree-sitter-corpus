@@ -44,7 +44,7 @@ simple tag
 
 ---
 
-(org_data (headline (stars) (title)))
+(org_data (headline (stars) (title) (tags)))
 #+end_quote
 
 * Limitations
