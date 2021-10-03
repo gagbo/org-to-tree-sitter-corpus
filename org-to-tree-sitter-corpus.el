@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: data languages tools
 ;; Homepage: https://github.com/gagbo/org-to-tree-sitter-corpus
-;; Package-Requires: ((emacs "27.1") (org "9.5"))
+;; Package-Requires: ((emacs "28.1") (org "9.5"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -23,6 +23,31 @@
 (require 'org-element)
 (require 'subr-x)
 (require 'cl-lib)
+(require 'files)
+
+;; Emacs byte compile compat
+;; Copy paste of code from  0bb42ef80357c86ea7dd6a2bccaff111bc83b65d
+(defun file-name-with-extension (filename extension)
+  "Set the EXTENSION of a FILENAME.
+The extension (in a file name) is the part that begins with the last \".\".
+
+Trims a leading dot from the EXTENSION so that either \"foo\" or
+\".foo\" can be given.
+
+Errors if the FILENAME or EXTENSION are empty, or if the given
+FILENAME has the format of a directory.
+
+See also `file-name-sans-extension'."
+  (let ((extn (string-trim-left extension "[.]")))
+    (cond ((string-empty-p filename)
+           (error "Empty filename"))
+          ((string-empty-p extn)
+           (error "Malformed extension: %s" extension))
+          ((directory-name-p filename)
+           (error "Filename is a directory: %s" filename))
+          (t
+           (concat (file-name-sans-extension filename) "." extn)))))
+;; End of compat section
 
 (defconst org-to-tree-sitter-corpus--separator "---\n"
   "Separator between input and expected value.")
@@ -49,7 +74,7 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
 
 (defun org-to-tree-sitter-corpus-make-test (input-str title)
   "Format a test from INPUT-STR with TITLE."
-  (let ((corpus-tree (org-to-tree-sitter-corpus--transform-tree (org-to-tree-sitter-corpus--parse-string input-str))))
+  (let ((corpus-tree (org-to-tree-sitter-corpus-transform-tree (org-to-tree-sitter-corpus--parse-string input-str))))
     (concat (org-to-tree-sitter-corpus--test-title title)
             "\n\n"
             input-str
@@ -70,56 +95,54 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
     (insert content)
     (org-element-parse-buffer)))
 
-(defun org-to-tree-sitter-corpus--transform-tree (ast)
-  "Transform AST from an org-element tree to a tree-sitter corpus tree."
-  (cl-remove-if #'null
-                (mapcar
-                 (lambda (element)
-                   (cond
-                    ((org-to-tree-sitter-corpus--transform--function-symbol element)
-                     (funcall (org-to-tree-sitter-corpus--transform--function-symbol element) element))
-                    (t nil)))
-                 ast)))
+(defalias 'org-to-tree-sitter-corpus-transform-tree #'org-to-tree-sitter-corpus--transform-org-data
+  "Transform AST from an org-element tree to a tree-sitter corpus tree.")
+
+(defun org-to-tree-sitter-corpus--transform-node (node)
+  "Transform NODE from an org-element tree to a tree-sitter corpus tree."
+  (cond
+   ((org-to-tree-sitter-corpus--transform--function-symbol node)
+    (funcall (org-to-tree-sitter-corpus--transform--function-symbol node) node))
+   (t nil)))
 
 (defun org-to-tree-sitter-corpus--transform--function-symbol (element)
   "Return the function symbol that manages ELEMENT, or nil if absent."
-  (symbol-function (intern (format "org-to-tree-sitter-corpus--transform-%s" (car element)))))
+  (let ((node-type (car element)))
+    (symbol-function (intern (format "org-to-tree-sitter-corpus--transform-%s" node-type)))))
 
 (defun org-to-tree-sitter-corpus--transform-org-data (data)
   "Transform DATA from an org-element root data to a tree-sitter corpus tree."
   (unless (eq (car data) 'org-data)
     (user-error (format "Expecting a org-data element, got %s" (car data))))
-  (let ((metadata (cadr data))
-        (children (caddr data)))
+  (let ((children (cddr data)))
     (cl-remove-if #'null
-                  (list 'org_data
-                        (mapcar #'org-to-tree-sitter-corpus--transform-tree children)))))
+                  (append '(org_data)
+                          (mapcar #'org-to-tree-sitter-corpus--transform-node children)))))
 
 (defun org-to-tree-sitter-corpus--transform-headline (headline)
-  "Transform headline from an org-element headline to a tree-sitter corpus tree."
+  "Transform HEADLINE from an org-element headline to a tree-sitter corpus tree."
   (unless (eq (car headline) 'headline)
     (user-error (format "expecting a headline element, got %s" (car headline))))
   (let ((metadata (cadr headline))
-        (children (caddr headline)))
+        (children (cddr headline)))
     (cl-remove-if #'null
-                  (list 'headline
-                        '(stars)
-                        (when (plist-get metadata :commentedp) '(comment_marker))
-                        (when (plist-get metadata :priority) '(priority_level))
-                        (when (plist-get metadata :todo-keyword) '(todo_keyword))
-                        (when (plist-get metadata :raw-value) '(title))
-                        (when (plist-get metadata :tags) '(tags))
-                        (mapcar #'org-to-tree-sitter-corpus--transform-tree children)))))
+                  (append '(headline)
+                          '((stars))
+                          (when (plist-get metadata :commentedp) '((comment_marker)))
+                          (when (plist-get metadata :priority) '((priority_level)))
+                          (when (plist-get metadata :todo-keyword) '((todo_keyword)))
+                          (when (plist-get metadata :title) '((title)))
+                          (when (plist-get metadata :tags) '((tags)))
+                          (mapcar #'org-to-tree-sitter-corpus--transform-node children)))))
 
 (defun org-to-tree-sitter-corpus--transform-section (section)
   "Transform SECTION from an org-element section to a tree-sitter corpus tree."
   (unless (eq (car section) 'section)
     (user-error (format "expecting a section element, got %s" (car section))))
-  (let ((metadata (cadr section))
-        (children (caddr section)))
+  (let ((children (cddr section)))
     (cl-remove-if #'null
-                  (list 'section
-                        (mapcar #'org-to-tree-sitter-corpus--transform-tree children)))))
+                  (append '(section)
+                          (mapcar #'org-to-tree-sitter-corpus--transform-node children)))))
 
 (defun org-to-tree-sitter-corpus--transform-paragraph (paragraph)
   "Transform PARAGRAPH from an org-element paragraph to a tree-sitter corpus tree."
@@ -127,10 +150,10 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
     (user-error (format "expecting a paragraph element, got %s" (car paragraph))))
   (let ((metadata (cadr paragraph)))
     (cl-remove-if #'null
-                  (list
+                  (append
                    (if (plist-get metadata :results)
-                       'results
-                     'paragraph)
+                       '(results)
+                     '(paragraph))
                    ;; paragraph data is a non-readable struct that contains the text,
                    ;; therefore we only set the (paragraph) data there
                    ;; Maybe it will be different later
@@ -142,10 +165,10 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
     (user-error (format "expecting a src-block element, got %s" (car src-block))))
   (let ((metadata (cadr src-block)))
     (cl-remove-if #'null
-                  (list 'src-block
-                        (when (plist-get metadata :language) '(language))
-                        (when (plist-get metadata :switches) '(switches))
-                        (when (plist-get metadata :parameters) '(parameters))))))
+                  (append '(src-block)
+                          (when (plist-get metadata :language) '((language)))
+                          (when (plist-get metadata :switches) '((switches)))
+                          (when (plist-get metadata :parameters) '((parameters)))))))
 
 (provide 'org-to-tree-sitter-corpus)
 ;;; org-to-tree-sitter-corpus.el ends here

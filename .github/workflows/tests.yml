@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs_version:
+          - snapshot
+    steps:
+    - uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs_version }}
+    - uses: actions/checkout@v2
+    - name: Run tests
+      run: './tools/run-tests.sh'
+    - name: Byte compile
+      run: './tools/byte-compile.sh'
