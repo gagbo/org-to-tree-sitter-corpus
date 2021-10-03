@@ -76,12 +76,8 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
                 (mapcar
                  (lambda (element)
                    (cond
-                    ;; ((eq element 'org-data)
-                    ;;  'org_data)
                     ((org-to-tree-sitter-corpus--transform--function-symbol element)
                      (funcall (org-to-tree-sitter-corpus--transform--function-symbol element) element))
-                    ;; ((eq (car element) 'headline)
-                    ;;  (org-to-tree-sitter-corpus--transform-headline element))
                     (t nil)))
                  ast)))
 
@@ -100,10 +96,11 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
                         (mapcar #'org-to-tree-sitter-corpus--transform-tree children)))))
 
 (defun org-to-tree-sitter-corpus--transform-headline (headline)
-  "Transform HEADLINE from an org-element headline to a tree-sitter corpus tree."
+  "Transform headline from an org-element headline to a tree-sitter corpus tree."
   (unless (eq (car headline) 'headline)
-    (user-error (format "Expecting a headline element, got %s" (car headline))))
-  (let ((metadata (cadr headline)))
+    (user-error (format "expecting a headline element, got %s" (car headline))))
+  (let ((metadata (cadr headline))
+        (children (caddr headline)))
     (cl-remove-if #'null
                   (list 'headline
                         '(stars)
@@ -111,7 +108,44 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
                         (when (plist-get metadata :priority) '(priority_level))
                         (when (plist-get metadata :todo-keyword) '(todo_keyword))
                         (when (plist-get metadata :raw-value) '(title))
-                        (when (plist-get metadata :tags) '(tags))))))
+                        (when (plist-get metadata :tags) '(tags))
+                        (mapcar #'org-to-tree-sitter-corpus--transform-tree children)))))
+
+(defun org-to-tree-sitter-corpus--transform-section (section)
+  "Transform SECTION from an org-element section to a tree-sitter corpus tree."
+  (unless (eq (car section) 'section)
+    (user-error (format "expecting a section element, got %s" (car section))))
+  (let ((metadata (cadr section))
+        (children (caddr section)))
+    (cl-remove-if #'null
+                  (list 'section
+                        (mapcar #'org-to-tree-sitter-corpus--transform-tree children)))))
+
+(defun org-to-tree-sitter-corpus--transform-paragraph (paragraph)
+  "Transform PARAGRAPH from an org-element paragraph to a tree-sitter corpus tree."
+  (unless (eq (car paragraph) 'paragraph)
+    (user-error (format "expecting a paragraph element, got %s" (car paragraph))))
+  (let ((metadata (cadr paragraph)))
+    (cl-remove-if #'null
+                  (list
+                   (if (plist-get metadata :results)
+                       'results
+                     'paragraph)
+                   ;; paragraph data is a non-readable struct that contains the text,
+                   ;; therefore we only set the (paragraph) data there
+                   ;; Maybe it will be different later
+                   ))))
+
+(defun org-to-tree-sitter-corpus--transform-src-block (src-block)
+  "Transform SRC-BLOCK from an org-element src-block to a tree-sitter corpus tree."
+  (unless (eq (car src-block) 'src-block)
+    (user-error (format "expecting a src-block element, got %s" (car src-block))))
+  (let ((metadata (cadr src-block)))
+    (cl-remove-if #'null
+                  (list 'src-block
+                        (when (plist-get metadata :language) '(language))
+                        (when (plist-get metadata :switches) '(switches))
+                        (when (plist-get metadata :parameters) '(parameters))))))
 
 (provide 'org-to-tree-sitter-corpus)
 ;;; org-to-tree-sitter-corpus.el ends here
