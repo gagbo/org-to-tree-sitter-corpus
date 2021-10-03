@@ -72,23 +72,32 @@ If optional DELETE-OLD is non-nil, delete the previous target file to avoid erro
 
 (defun org-to-tree-sitter-corpus--transform-tree (ast)
   "Transform AST from an org-element tree to a tree-sitter corpus tree."
-  (unless (eq (car ast) 'org-data)
-    (user-error (format "Expecting the root of an AST, got %s" (car ast))))
   (cl-remove-if #'null
                 (mapcar
                  (lambda (element)
-                   (cond ((eq element 'org-data)
-                          'org_data)
-                         ((org-to-tree-sitter-corpus--transform--function-symbol element)
-                          (funcall (org-to-tree-sitter-corpus--transform--function-symbol element) element))
-                         ;; ((eq (car element) 'headline)
-                         ;;  (org-to-tree-sitter-corpus--transform-headline element))
-                         (t nil)))
+                   (cond
+                    ;; ((eq element 'org-data)
+                    ;;  'org_data)
+                    ((org-to-tree-sitter-corpus--transform--function-symbol element)
+                     (funcall (org-to-tree-sitter-corpus--transform--function-symbol element) element))
+                    ;; ((eq (car element) 'headline)
+                    ;;  (org-to-tree-sitter-corpus--transform-headline element))
+                    (t nil)))
                  ast)))
 
 (defun org-to-tree-sitter-corpus--transform--function-symbol (element)
   "Return the function symbol that manages ELEMENT, or nil if absent."
   (symbol-function (intern (format "org-to-tree-sitter-corpus--transform-%s" (car element)))))
+
+(defun org-to-tree-sitter-corpus--transform-org-data (data)
+  "Transform DATA from an org-element root data to a tree-sitter corpus tree."
+  (unless (eq (car data) 'org-data)
+    (user-error (format "Expecting a org-data element, got %s" (car data))))
+  (let ((metadata (cadr data))
+        (children (caddr data)))
+    (cl-remove-if #'null
+                  (list 'org_data
+                        (mapcar #'org-to-tree-sitter-corpus--transform-tree children)))))
 
 (defun org-to-tree-sitter-corpus--transform-headline (headline)
   "Transform HEADLINE from an org-element headline to a tree-sitter corpus tree."
