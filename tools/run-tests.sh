@@ -4,11 +4,12 @@ set -e
 
 EMACS="${EMACS:=emacs}"
 
-NEEDED_PACKAGES="org"
+NEEDED_PACKAGES="org compat"
 
 INIT_PACKAGE_EL="(progn \
   (require 'package) \
   (push '(\"melpa\" . \"https://melpa.org/packages/\") package-archives) \
+  (push '(\"elpa\" . \"https://elpa.gnu.org/packages/\") package-archives) \
   (package-initialize) \
   (unless package-archive-contents \
      (package-refresh-contents)) \

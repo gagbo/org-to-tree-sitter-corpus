@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: data languages tools
 ;; Homepage: https://github.com/gagbo/org-to-tree-sitter-corpus
-;; Package-Requires: ((emacs "28.1") (org "9.5"))
+;; Package-Requires: ((emacs "28.1") (org "9.5") (compat "28.1.0.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -25,37 +25,14 @@
 (require 'cl-lib)
 (require 'files)
 
-;; Emacs byte compile compat
-;; Copy paste of code from  0bb42ef80357c86ea7dd6a2bccaff111bc83b65d
-(defun file-name-with-extension (filename extension)
-  "Set the EXTENSION of a FILENAME.
-The extension (in a file name) is the part that begins with the last \".\".
-
-Trims a leading dot from the EXTENSION so that either \"foo\" or
-\".foo\" can be given.
-
-Errors if the FILENAME or EXTENSION are empty, or if the given
-FILENAME has the format of a directory.
-
-See also `file-name-sans-extension'."
-  (let ((extn (string-trim-left extension "[.]")))
-    (cond ((string-empty-p filename)
-           (error "Empty filename"))
-          ((string-empty-p extn)
-           (error "Malformed extension: %s" extension))
-          ((directory-name-p filename)
-           (error "Filename is a directory: %s" filename))
-          (t
-           (concat (file-name-sans-extension filename) "." extn)))))
-;; End of compat section
-
 (defconst org-to-tree-sitter-corpus--separator "---\n"
   "Separator between input and expected value.")
 
 (defun org-to-tree-sitter-corpus-convert-org-file (file-path &optional delete-old)
   "Convert FILE-PATH from an org buffer to a corpus test file.
 
-If optional DELETE-OLD is non-nil, delete the previous target file to avoid error on writes."
+If optional DELETE-OLD is non-nil, delete the previous target file to
+avoid error on writes."
   (let ((corpus-file-path (file-name-with-extension file-path "txt")))
     (unless (string= (file-name-extension file-path) "org")
       (user-error "Expecting an org file"))
