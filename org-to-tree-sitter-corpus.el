@@ -80,7 +80,7 @@ avoid error on writes."
   (cond
    ((org-to-tree-sitter-corpus--transform--function-symbol node)
     (funcall (org-to-tree-sitter-corpus--transform--function-symbol node) node))
-   (t nil)))
+   (t (user-error (format "Unmanaged node type: %s" (car node))))))
 
 (defun org-to-tree-sitter-corpus--transform--function-symbol (element)
   "Return the function symbol that manages ELEMENT, or nil if absent."
