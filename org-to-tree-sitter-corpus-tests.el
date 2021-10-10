@@ -25,7 +25,7 @@
 
 (defun ottsct--make-test (content ts-tree)
   "Return a test that asserts that CONTENT is transformed to TS-TREE."
-  (let ((actual-tree (thread-first content (ottsct--make-tree) (org-to-tree-sitter-corpus-transform-tree))))
+  (let ((actual-tree (thread-first content (string-trim-left) (ottsct--make-tree) (org-to-tree-sitter-corpus-transform-tree))))
     (should (equal actual-tree ts-tree))))
 
 (ert-deftest ottsc-test-headline ()
@@ -58,13 +58,78 @@
 (ert-deftest ottsc-test-paragraph ()
   "Assert that paragraphs are correctly transformed."
   (ottsct--make-test
-   "*\nSample text"
+   "
+*
+Sample text"
    '(org_data (headline (stars) (section (paragraph)))))
   (ottsct--make-test
-   "#+RESULTS: test\nSample text"
+   "
+#+RESULTS: test
+Sample text"
    '(org_data
      (section
       (results)))))
+
+(ert-deftest ottsc-test-keyword ()
+  "Assert that keywords are correctly transformed."
+  (ottsct--make-test
+   "#+TITLE: Some title"
+   '(org_data (keyword (key) (value))))
+  (ottsct--make-test
+   "
+#+TITLE: Some title
+#+SUBTITLE: I'm not over"
+   '(org_data (keyword (key) (value))
+              (keyword (key) (value)))))
+
+;; TODO: Add support for those
+(ert-deftest ottsc-test-drawers ()
+  "Assert that drawers are correctly transformed."
+  (ottsct--make-test
+   "
+* Random drawer
+Text at the beginning
+:CUSTOM:
+Hidden arbitrary drawer
+:END:
+Another paragraph"
+   '(org_data
+     (headline
+      (stars)
+      (section
+       (paragraph)
+       (drawer (paragraph))
+       (paragraph)))))
+  ;; Misplaced Properties drawer is still a drawer
+  (ottsct--make-test
+   "
+* Random drawer
+Text at the beginning
+:PROPERTIES:
+Hidden arbitrary drawer
+:END:
+Another paragraph"
+   '(org_data
+     (headline
+      (stars)
+      (section
+       (paragraph)
+       (drawer (paragraph))
+       (paragraph)))))
+  (ottsct--make-test
+   "
+* Random drawer
+:PROPERTIES:
+:key: Value
+:END:
+The paragraph"
+   '(org_data
+     (headline
+      (stars)
+      (section
+       (property_drawer (node_property (key) (value)))
+       (drawer (paragraph))
+       (paragraph))))))
 
 (provide 'org-to-tree-sitter-corpus-tests)
 ;;; org-to-tree-sitter-corpus-tests.el ends here

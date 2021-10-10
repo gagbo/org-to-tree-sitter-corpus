@@ -147,5 +147,17 @@ avoid error on writes."
                           (when (plist-get metadata :switches) '((switches)))
                           (when (plist-get metadata :parameters) '((parameters)))))))
 
+(defun org-to-tree-sitter-corpus--transform-keyword (keyword)
+  "Transform HEADLINE from an org-element headline to a tree-sitter corpus tree."
+  (unless (eq (car keyword) 'keyword)
+    (user-error (format "expecting a keyword element, got %s" (car keyword))))
+  (let ((metadata (cadr keyword))
+        (children (cddr keyword)))
+    (cl-remove-if #'null
+                  (append '(keyword)
+                          '((key))
+                          (when (plist-get metadata :value) '((value)))
+                          (mapcar #'org-to-tree-sitter-corpus--transform-node children)))))
+
 (provide 'org-to-tree-sitter-corpus)
 ;;; org-to-tree-sitter-corpus.el ends here
