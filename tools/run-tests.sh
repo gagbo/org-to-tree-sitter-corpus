@@ -4,7 +4,7 @@ set -e
 
 EMACS="${EMACS:=emacs}"
 
-NEEDED_PACKAGES="org compat"
+NEEDED_PACKAGES="org"
 
 INIT_PACKAGE_EL="(progn \
   (require 'package) \

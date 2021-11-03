@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: data languages tools
 ;; Homepage: https://github.com/gagbo/org-to-tree-sitter-corpus
-;; Package-Requires: ((emacs "28.1") (org "9.5") (compat "28.1.0.0"))
+;; Package-Requires: ((emacs "28.1") (org "9.5"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
